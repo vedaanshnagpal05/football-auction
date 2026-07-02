@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Top 5 League Auction</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#141926; --panel2:#1b2233; --line:#2a3245;
+    --txt:#e8ecf5; --dim:#8b94a8; --gold:#f5c542; --green:#3ddc84; --red:#ff5d5d;
+    --blue:#4da3ff; --purple:#a78bfa;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 600px at 50% -10%,#1a2340 0%,var(--bg) 60%);color:var(--txt);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;min-height:100vh}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px}
+  h1{font-size:26px;letter-spacing:2px;text-transform:uppercase}
+  .sub{color:var(--dim);font-size:13px;margin-top:2px}
+  .screen{display:none}.screen.active{display:block}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  button{cursor:pointer;border:none;border-radius:10px;font-weight:700;font-family:inherit}
+  .btn{background:var(--gold);color:#1a1400;padding:12px 22px;font-size:15px;transition:transform .08s}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.gray{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+  .btn.red{background:var(--red);color:#fff}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  select,input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    border-radius:8px;padding:9px 10px;font-size:14px;font-family:inherit}
+  /* ---------- SETUP ---------- */
+  .setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  @media(max-width:800px){.setup-grid{grid-template-columns:1fr}}
+  .club-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .club-row input{flex:1}
+  .toggle{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .toggle button{background:var(--panel2);color:var(--dim);padding:9px 14px;font-size:13px;border-radius:0}
+  .toggle button.on{background:var(--blue);color:#fff}
+  .opt-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+  .opt-row:last-child{border:none}
+  label.lbl{color:var(--dim);font-size:14px}
+  .howto{color:var(--dim);font-size:13px;line-height:1.7;margin-top:10px}
+  .howto b{color:var(--txt)}
+  /* ---------- AUCTION ---------- */
+  .auction-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;margin-top:14px}
+  @media(max-width:900px){.auction-grid{grid-template-columns:1fr}}
+  .lotnum{color:var(--dim);font-size:12px;letter-spacing:2px;text-transform:uppercase}
+  .pcard{position:relative;overflow:hidden;text-align:center;padding:26px 16px 20px}
+  .pcard .stripe{position:absolute;top:0;left:0;right:0;height:6px}
+  .pname{font-size:30px;font-weight:800;margin-top:6px}
+  .pmeta{color:var(--dim);font-size:14px;margin-top:4px}
+  .badges{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+  .badge{padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--panel2)}
+  .badge.pos-GK{color:var(--gold)} .badge.pos-DEF{color:var(--blue)}
+  .badge.pos-MID{color:var(--green)} .badge.pos-FWD{color:var(--red)}
+  .rating{font-size:52px;font-weight:900;color:var(--gold);line-height:1;margin-top:14px}
+  .rating small{font-size:13px;color:var(--dim);display:block;font-weight:600;letter-spacing:2px}
+  .bidbox{display:flex;justify-content:center;gap:26px;margin-top:16px}
+  .bidbox .v{font-size:24px;font-weight:800}
+  .bidbox .k{font-size:11px;color:var(--dim);letter-spacing:1px;text-transform:uppercase}
+  .leader{color:var(--green)}
+  .turnbar{margin-top:16px;padding:12px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);
+    font-size:15px;min-height:52px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+  .turnbar .who{font-weight:800}
+  .hammer{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(11,14,20,.88);z-index:5;flex-direction:column;gap:8px}
+  .hammer.show{display:flex;animation:pop .25s}
+  .hammer .big{font-size:40px;font-weight:900}
+  .hammer .big.sold{color:var(--green)} .hammer .big.unsold{color:var(--dim)}
+  @keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+  .log{margin-top:14px;max-height:150px;overflow-y:auto;font-size:13px;color:var(--dim)}
+  .log div{padding:3px 0;border-bottom:1px dashed #222a3c}
+  .log .bid{color:var(--txt)}
+  /* club panels */
+  .clubs{display:flex;flex-direction:column;gap:10px}
+  .club{padding:12px}
+  .club.turn{outline:2px solid var(--gold)}
+  .club.out{opacity:.55}
+  .chead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .cname{font-weight:800;font-size:15px}
+  .ctag{font-size:11px;color:var(--dim)}
+  .cbudget{font-weight:800;color:var(--gold)}
+  .slots{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap}
+  .slot{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;
+    justify-content:center;font-size:10px;color:var(--dim);background:var(--panel2)}
+  .slot.filled{background:var(--gold);color:#1a1400;font-weight:800;border-color:var(--gold)}
+  .needs{display:flex;gap:10px;margin-top:8px;font-size:11px;color:var(--dim);flex-wrap:wrap}
+  .needs b{color:var(--txt)}
+  .needs .ok{color:var(--green)}
+  .statusline{font-size:12px;color:var(--dim);margin-top:6px;font-style:italic;min-height:15px}
+  /* ---------- SEASON ---------- */
+  .squads{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px}
+  .sq table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  .sq td{padding:4px 6px;border-bottom:1px solid #202a3e}
+  .sq td.r{text-align:right;color:var(--gold);font-weight:700}
+  .xi{background:rgba(61,220,132,.07)}
+  .stand{width:100%;border-collapse:collapse;font-size:14px;margin-top:12px}
+  .stand th{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:8px;text-align:left}
+  .stand td{padding:9px 8px;border-top:1px solid var(--line)}
+  .stand tr.champ td{background:rgba(245,197,66,.08)}
+  .stand .pts{font-weight:900;color:var(--gold)}
+  .matches{margin-top:14px;max-height:260px;overflow-y:auto;font-size:14px}
+  .match{display:flex;justify-content:space-between;padding:7px 10px;border-bottom:1px solid #202a3e}
+  .match .score{font-weight:800}
+  .champbanner{text-align:center;padding:26px;margin-top:14px;border:1px solid var(--gold);border-radius:14px;
+    background:linear-gradient(180deg,rgba(245,197,66,.12),transparent)}
+  .champbanner .t{font-size:34px;font-weight:900;color:var(--gold)}
+  /* draft hand */
+  .hand{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin-top:12px}
+  .hcard{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 8px 10px;text-align:center;
+    cursor:pointer;position:relative;overflow:hidden;transition:transform .08s,border-color .08s}
+  .hcard:hover{transform:translateY(-3px);border-color:var(--gold)}
+  .hcard .stripe{position:absolute;top:0;left:0;right:0;height:4px}
+  .hcard .r{font-size:26px;font-weight:900;color:var(--gold)}
+  .hcard .nm{font-weight:700;font-size:13px;margin-top:5px;min-height:34px}
+  .hcard .mt{font-size:11px;color:var(--dim);margin-top:2px}
+  .hcard .key{font-size:10px;color:var(--dim);margin-top:6px}
+  .hcard.aipick{outline:2px solid var(--green);transform:translateY(-3px)}
+  .hcard.disabled{pointer-events:none;opacity:.8}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .footer-note{color:#5a6478;font-size:11px;margin-top:20px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ================= SETUP ================= -->
+  <div class="screen active" id="scr-setup">
+    <h1>⚽ Top 5 League Auction</h1>
+    <div class="sub">Bid for stars of the Premier League · La Liga · Serie A · Bundesliga · Ligue 1 — then simulate the season.</div>
+    <div class="setup-grid">
+      <div class="card">
+        <h3>Clubs</h3>
+        <div class="sub" style="margin-bottom:10px">2–6 clubs. Set each to Human (you / a friend) or AI.</div>
+        <div id="club-rows"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn gray" onclick="addClub()">+ Add club</button>
+          <button class="btn gray" onclick="removeClub()">− Remove</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Rules</h3>
+        <div class="opt-row"><label class="lbl">Auction mode</label>
+          <select id="opt-mode"><option value="turn" selected>Auction — turn-based (Human/AI)</option><option value="manual">Auction — manual (auctioneer records bids)</option><option value="draft">Draft — pick from random cards (no bidding)</option></select></div>
+        <div class="opt-row"><label class="lbl">Budget per club</label>
+          <select id="opt-budget"><option value="300">€300m</option><option value="400" selected>€400m</option><option value="500">€500m</option></select></div>
+        <div class="opt-row"><label class="lbl">Player pool</label>
+          <select id="opt-pool"><option value="50">Top 50 (quick)</option><option value="100" selected>Top 100</option><option value="150">Full 150</option></select></div>
+        <div class="opt-row"><label class="lbl">AI speed</label>
+          <select id="opt-speed"><option value="900">Normal</option><option value="450" selected>Fast</option><option value="150">Blitz</option></select></div>
+        <div class="howto">
+          <b>How to play:</b> players go under the hammer one by one. On your turn, <b>Bid</b> the next increment or <b>Pass</b> (passing is final for that lot). Fill up to <b>15 slots</b> — you need at least <b>1 GK, 3 DEF, 3 MID, 1 FWD</b> to field a proper XI. After the auction, the season is simulated: every club plays each other home &amp; away. Strongest squad usually wins… usually. <span style="color:var(--txt)">Keys: <b>B</b> = bid, <b>P</b> = pass.</span><br><b>Manual mode:</b> perfect for a live auction with friends in the room — no turns or AI. You're the auctioneer: tap a club to record its bid, then hit 🔨 Sell (or Unsold). Budgets and squads are tracked for you; Human/AI toggles are ignored.<br><b>Draft mode:</b> IPL-Unbeaten style — no money. Clubs snake-draft 12 rounds; on your pick you're dealt 5 random cards and choose one (keys 1–5). Unpicked cards go back in the deck.
+        </div>
+        <button class="btn" style="width:100%;margin-top:14px" onclick="startAuction()">🔨 Start Auction</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= AUCTION ================= -->
+  <div class="screen" id="scr-auction">
+    <div class="topbar">
+      <div><h1>🔨 Auction Room</h1><div class="sub" id="auction-sub"></div></div>
+      <button class="btn red" onclick="endAuctionEarly()">End auction → Season</button>
+    </div>
+    <div class="auction-grid">
+      <div>
+        <div class="card pcard" id="pcard">
+          <div class="stripe" id="p-stripe"></div>
+          <div class="lotnum" id="p-lot"></div>
+          <div class="pname" id="p-name"></div>
+          <div class="pmeta" id="p-meta"></div>
+          <div class="badges" id="p-badges"></div>
+          <div class="rating"><span id="p-rating"></span><small>RATING</small></div>
+          <div class="bidbox">
+            <div><div class="v" id="p-base"></div><div class="k">Base price</div></div>
+            <div><div class="v" id="p-bid">—</div><div class="k">Current bid</div></div>
+            <div><div class="v leader" id="p-leader">—</div><div class="k">Leading</div></div>
+          </div>
+          <div class="turnbar" id="turnbar"></div>
+          <div class="hammer" id="hammer"><div class="big" id="hammer-big"></div><div id="hammer-sub" class="sub"></div></div>
+        </div>
+        <div class="card" id="draftbox" style="display:none">
+          <div class="lotnum" id="d-round"></div>
+          <div class="turnbar" id="d-turn" style="margin-top:10px"></div>
+          <div class="hand" id="d-hand"></div>
+        </div>
+        <div class="card" style="margin-top:12px"><b style="font-size:13px">Bid log</b><div class="log" id="log"></div></div>
+      </div>
+      <div class="clubs" id="club-panels"></div>
+    </div>
+  </div>
+
+  <!-- ================= SEASON ================= -->
+  <div class="screen" id="scr-season">
+    <div class="topbar">
+      <div><h1>🏆 Season</h1><div class="sub">Double round-robin. 3 pts a win, goal difference breaks ties.</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="btn-sim" onclick="simulateSeason()">▶ Simulate Season</button>
+        <button class="btn gray" onclick="location.reload()">↺ New game</button>
+      </div>
+    </div>
+    <div id="champ-slot"></div>
+    <div class="card" id="stand-card" style="margin-top:14px;display:none">
+      <b>Table</b><table class="stand" id="standings"></table>
+    </div>
+    <div class="card" id="match-card" style="margin-top:14px;display:none">
+      <b>Results</b><div class="matches" id="matches"></div>
+    </div>
+    <h3 style="margin-top:20px">Squads</h3>
+    <div class="sub">Highlighted rows = best XI used in the sim. Ghost players (rating 55) fill any missing XI positions.</div>
+    <div class="squads" id="squads"></div>
+  </div>
+
+  <div class="footer-note">Mock game — player pool, clubs and ratings are approximate and for fun only.</div>
+</div>
+
+<script>
+/* ================= DATA ================= */
+const LG = {
+  EPL:['Premier League','#803ce8'], LIGA:['La Liga','#ff7a29'], SA:['Serie A','#2ea8ff'],
+  BUN:['Bundesliga','#e33b3b'], L1:['Ligue 1','#ffd23f']
+};
+/* [name, club, league, pos, rating, base €m] */
+const PLAYERS = [
+ ["Erling Haaland","Man City","EPL","FWD",91,40],["Mohamed Salah","Liverpool","EPL","FWD",90,35],
+ ["Rodri","Man City","EPL","MID",90,35],["Bukayo Saka","Arsenal","EPL","FWD",88,30],
+ ["Cole Palmer","Chelsea","EPL","MID",88,30],["Alexander Isak","Liverpool","EPL","FWD",88,30],
+ ["Florian Wirtz","Liverpool","EPL","MID",89,32],["Virgil van Dijk","Liverpool","EPL","DEF",89,25],
+ ["William Saliba","Arsenal","EPL","DEF",87,25],["Declan Rice","Arsenal","EPL","MID",87,25],
+ ["Martin Ødegaard","Arsenal","EPL","MID",87,25],["Phil Foden","Man City","EPL","MID",86,22],
+ ["Bruno Fernandes","Man United","EPL","MID",87,22],["Alisson Becker","Liverpool","EPL","GK",88,20],
+ ["Ederson","Man City","EPL","GK",86,15],["Gabriel Magalhães","Arsenal","EPL","DEF",85,18],
+ ["Ollie Watkins","Aston Villa","EPL","FWD",84,15],["Anthony Gordon","Newcastle","EPL","FWD",84,15],
+ ["Moisés Caicedo","Chelsea","EPL","MID",86,22],["Rúben Dias","Man City","EPL","DEF",86,20],
+ ["Kylian Mbappé","Real Madrid","LIGA","FWD",92,45],["Vinícius Júnior","Real Madrid","LIGA","FWD",90,38],
+ ["Jude Bellingham","Real Madrid","LIGA","MID",90,38],["Lamine Yamal","Barcelona","LIGA","FWD",91,42],
+ ["Raphinha","Barcelona","LIGA","FWD",88,28],["Robert Lewandowski","Barcelona","LIGA","FWD",86,18],
+ ["Pedri","Barcelona","LIGA","MID",89,30],["Federico Valverde","Real Madrid","LIGA","MID",88,28],
+ ["Rodrygo","Real Madrid","LIGA","FWD",86,22],["Trent Alexander-Arnold","Real Madrid","LIGA","DEF",86,22],
+ ["Antonio Rüdiger","Real Madrid","LIGA","DEF",85,16],["Éder Militão","Real Madrid","LIGA","DEF",85,16],
+ ["Thibaut Courtois","Real Madrid","LIGA","GK",89,22],["Marc-André ter Stegen","Barcelona","LIGA","GK",86,14],
+ ["Jan Oblak","Atlético Madrid","LIGA","GK",87,16],["Antoine Griezmann","Atlético Madrid","LIGA","FWD",85,14],
+ ["Julián Álvarez","Atlético Madrid","LIGA","FWD",88,30],["Nico Williams","Athletic Club","LIGA","FWD",86,24],
+ ["Gavi","Barcelona","LIGA","MID",85,18],["Frenkie de Jong","Barcelona","LIGA","MID",86,18],
+ ["Lautaro Martínez","Inter","SA","FWD",88,28],["Marcus Thuram","Inter","SA","FWD",86,20],
+ ["Nicolò Barella","Inter","SA","MID",87,24],["Hakan Çalhanoğlu","Inter","SA","MID",86,18],
+ ["Alessandro Bastoni","Inter","SA","DEF",87,22],["Mike Maignan","AC Milan","SA","GK",87,18],
+ ["Rafael Leão","AC Milan","SA","FWD",86,24],["Christian Pulisic","AC Milan","SA","FWD",85,18],
+ ["Theo Hernández","AC Milan","SA","DEF",85,16],["Dušan Vlahović","Juventus","SA","FWD",84,16],
+ ["Kenan Yıldız","Juventus","SA","FWD",85,22],["Gleison Bremer","Juventus","SA","DEF",85,16],
+ ["Scott McTominay","Napoli","SA","MID",85,16],["Romelu Lukaku","Napoli","SA","FWD",84,12],
+ ["Paulo Dybala","Roma","SA","FWD",84,12],["Yann Sommer","Inter","SA","GK",85,10],
+ ["Denzel Dumfries","Inter","SA","DEF",84,12],["Ademola Lookman","Atalanta","SA","FWD",85,18],
+ ["Charles De Ketelaere","Atalanta","SA","MID",84,14],["Federico Dimarco","Inter","SA","DEF",84,12],
+ ["Harry Kane","Bayern","BUN","FWD",90,35],["Jamal Musiala","Bayern","BUN","MID",89,32],
+ ["Michael Olise","Bayern","BUN","FWD",88,28],["Joshua Kimmich","Bayern","BUN","MID",86,18],
+ ["Alphonso Davies","Bayern","BUN","DEF",85,16],["Manuel Neuer","Bayern","BUN","GK",84,8],
+ ["Dayot Upamecano","Bayern","BUN","DEF",84,14],["Serhou Guirassy","Dortmund","BUN","FWD",86,20],
+ ["Karim Adeyemi","Dortmund","BUN","FWD",84,14],["Julian Brandt","Dortmund","BUN","MID",84,12],
+ ["Gregor Kobel","Dortmund","BUN","GK",86,14],["Nico Schlotterbeck","Dortmund","BUN","DEF",85,14],
+ ["Xavi Simons","RB Leipzig","BUN","MID",86,22],["Loïs Openda","RB Leipzig","BUN","FWD",85,18],
+ ["Benjamin Šeško","RB Leipzig","BUN","FWD",86,24],["Granit Xhaka","Leverkusen","BUN","MID",84,10],
+ ["Alejandro Grimaldo","Leverkusen","BUN","DEF",85,14],["Jonathan Tah","Bayern","BUN","DEF",85,14],
+ ["Patrik Schick","Leverkusen","BUN","FWD",84,12],["Angelo Stiller","Stuttgart","BUN","MID",84,12],
+ ["Ousmane Dembélé","PSG","L1","FWD",90,32],["Khvicha Kvaratskhelia","PSG","L1","FWD",88,26],
+ ["Vitinha","PSG","L1","MID",89,28],["João Neves","PSG","L1","MID",87,24],
+ ["Achraf Hakimi","PSG","L1","DEF",89,26],["Nuno Mendes","PSG","L1","DEF",87,20],
+ ["Désiré Doué","PSG","L1","FWD",87,26],["Bradley Barcola","PSG","L1","FWD",86,22],
+ ["Marquinhos","PSG","L1","DEF",85,12],["Gianluigi Donnarumma","PSG","L1","GK",89,20],
+ ["Willian Pacho","PSG","L1","DEF",85,14],["Fabián Ruiz","PSG","L1","MID",85,12],
+ ["Alexandre Lacazette","Lyon","L1","FWD",82,8],["Rayan Cherki","Lyon","L1","MID",85,18],
+ ["Jonathan David","Lille","L1","FWD",85,16],["Lucas Chevalier","Lille","L1","GK",84,10],
+ ["Mason Greenwood","Marseille","L1","FWD",85,16],["Adrien Rabiot","Marseille","L1","MID",83,8],
+ ["Pierre-Emerick Aubameyang","Marseille","L1","FWD",81,6],["Leonardo Balerdi","Marseille","L1","DEF",82,8],
+ ["Kai Havertz","Arsenal","EPL","FWD",84,14],["Jordan Pickford","Everton","EPL","GK",85,10],
+ ["Cristian Romero","Tottenham","EPL","DEF",85,16],["Micky van de Ven","Tottenham","EPL","DEF",85,16],
+ ["Eberechi Eze","Arsenal","EPL","MID",85,18],["Morgan Rogers","Aston Villa","EPL","MID",84,16],
+ ["Bryan Mbeumo","Man United","EPL","FWD",85,18],["Matheus Cunha","Man United","EPL","FWD",84,16],
+ ["Enzo Fernández","Chelsea","EPL","MID",85,18],["Marc Guéhi","Crystal Palace","EPL","DEF",84,14],
+ ["Dani Olmo","Barcelona","LIGA","MID",85,16],["Jules Koundé","Barcelona","LIGA","DEF",85,16],
+ ["Pau Cubarsí","Barcelona","LIGA","DEF",85,18],["Alejandro Balde","Barcelona","LIGA","DEF",84,14],
+ ["Arda Güler","Real Madrid","LIGA","MID",85,18],["Aurélien Tchouaméni","Real Madrid","LIGA","MID",85,16],
+ ["Eduardo Camavinga","Real Madrid","LIGA","MID",85,16],["Dean Huijsen","Real Madrid","LIGA","DEF",85,16],
+ ["Mikel Oyarzabal","Real Sociedad","LIGA","FWD",84,12],["Unai Simón","Athletic Club","LIGA","GK",85,12],
+ ["Kevin De Bruyne","Napoli","SA","MID",86,14],["Alessandro Buongiorno","Napoli","SA","DEF",84,12],
+ ["Khéphren Thuram","Juventus","SA","MID",84,12],["Alex Meret","Napoli","SA","GK",83,8],
+ ["Gianluca Mancini","Roma","SA","DEF",83,8],["Moise Kean","Fiorentina","SA","FWD",84,12],
+ ["David de Gea","Fiorentina","SA","GK",84,8],["Artem Dovbyk","Roma","SA","FWD",83,8],
+ ["Youssouf Fofana","AC Milan","SA","MID",83,8],["Nico Paz","Como","SA","MID",84,14],
+ ["Konrad Laimer","Bayern","BUN","MID",83,8],["Kim Min-jae","Bayern","BUN","DEF",84,12],
+ ["Serge Gnabry","Bayern","BUN","FWD",83,8],["Nick Woltemade","Stuttgart","BUN","FWD",84,14],
+ ["Jonathan Burkardt","Frankfurt","BUN","FWD",83,10],["Ritsu Doan","Frankfurt","BUN","MID",83,8],
+ ["Waldemar Anton","Dortmund","BUN","DEF",82,8],["Oliver Baumann","Hoffenheim","BUN","GK",82,6],
+ ["Can Uzun","Frankfurt","BUN","MID",83,10],["Aleksandar Pavlović","Bayern","BUN","MID",84,12],
+ ["Illia Zabarnyi","PSG","L1","DEF",84,16],["Lucas Hernández","PSG","L1","DEF",82,8],
+ ["Warren Zaïre-Emery","PSG","L1","MID",84,14],["Amine Gouiri","Marseille","L1","FWD",83,10],
+ ["Terem Moffi","Nice","L1","FWD",82,8],["Evann Guessand","Nice","L1","FWD",82,8],
+ ["Malick Fofana","Lyon","L1","FWD",84,14],["Georges Mikautadze","Lyon","L1","FWD",83,10],
+ ["Brice Samba","Rennes","L1","GK",83,8],["Pierre Lees-Melou","Brest","L1","MID",81,6]
+];
+const DEFAULT_NAMES=["Thunder FC","Royal United","Atlético Nova","Dynamo Kings","Crimson City","Galaxy XI"];
+const SQUAD_CAP=15, MIN_NEED={GK:1,DEF:3,MID:3,FWD:1}, TARGET={GK:2,DEF:5,MID:5,FWD:3};
+
+/* ================= SETUP UI ================= */
+let setupClubs=[{name:DEFAULT_NAMES[0],human:true},{name:DEFAULT_NAMES[1],human:false},{name:DEFAULT_NAMES[2],human:false}];
+function renderSetup(){
+  const box=document.getElementById('club-rows');
+  box.innerHTML=setupClubs.map((c,i)=>`
+    <div class="club-row">
+      <input type="text" value="${c.name.replace(/"/g,'&quot;')}" onchange="setupClubs[${i}].name=this.value">
+      <div class="toggle">
+        <button class="${c.human?'on':''}" onclick="setupClubs[${i}].human=true;renderSetup()">👤 Human</button>
+        <button class="${!c.human?'on':''}" onclick="setupClubs[${i}].human=false;renderSetup()">🤖 AI</button>
+      </div>
+    </div>`).join('');
+}
+function addClub(){ if(setupClubs.length<6){setupClubs.push({name:DEFAULT_NAMES[setupClubs.length]||('Club '+(setupClubs.length+1)),human:false});renderSetup();} }
+function removeClub(){ if(setupClubs.length>2){setupClubs.pop();renderSetup();} }
+renderSetup();
+
+/* ================= GAME STATE ================= */
+let clubs=[], pool=[], lotIdx=0, aiDelay=450, manualMode=false, draftMode=false, draft=null;
+const DRAFT_ROUNDS=12, HAND_SIZE=5;
+let lot=null; // {p, bid, leader, passed:Set, turn, vals:[]}
+let starter=0, awaitingHuman=false;
+
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+function money(m){return '€'+m+'m';}
+function posCount(c){const n={GK:0,DEF:0,MID:0,FWD:0};c.squad.forEach(s=>n[s.p[3]]++);return n;}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function startAuction(){
+  const budget=+document.getElementById('opt-budget').value;
+  const mode=document.getElementById('opt-mode').value;
+  manualMode=mode==='manual'; draftMode=mode==='draft';
+  aiDelay=+document.getElementById('opt-speed').value;
+  const poolSize=+document.getElementById('opt-pool').value;
+  clubs=setupClubs.map((c,i)=>({id:i,name:c.name.trim()||('Club '+(i+1)),human:c.human,budget,squad:[],
+    aggr:0.9+Math.random()*0.25}));
+  pool=[...PLAYERS].sort((a,b)=>b[4]-a[4]).slice(0,poolSize);
+  shuffle(pool);
+  lotIdx=0;starter=0;
+  document.getElementById('auction-sub').textContent=draftMode
+    ? `${clubs.length} clubs · snake draft · ${DRAFT_ROUNDS} rounds · deck of ${pool.length}`
+    : `${clubs.length} clubs · ${money(budget)} each · ${pool.length} players${manualMode?' · manual (auctioneer) mode':''}`;
+  document.getElementById('pcard').style.display=draftMode?'none':'';
+  document.getElementById('draftbox').style.display=draftMode?'':'none';
+  show('scr-auction');
+  if(draftMode){ draft={count:0, picking:false}; renderClubs(); draftNext(); } else nextLot();
+}
+
+/* ---------- draft mode ---------- */
+function draftClub(){
+  const n=clubs.length, r=Math.floor(draft.count/n), i=draft.count%n;
+  return clubs[(r%2===0)?i:(n-1-i)];
+}
+function draftNext(){
+  if(draft.count>=DRAFT_ROUNDS*clubs.length || pool.length===0){ toSeason(); return; }
+  const c=draftClub(), r=Math.floor(draft.count/clubs.length)+1;
+  // deal a hand
+  const idxs=shuffle([...pool.keys()]).slice(0,Math.min(HAND_SIZE,pool.length));
+  draft.hand=idxs.map(i=>pool[i]); draft.picking=true; draft.clubId=c.id;
+  document.getElementById('d-round').textContent=`Round ${r} of ${DRAFT_ROUNDS} · Pick ${draft.count+1}`;
+  document.getElementById('d-turn').innerHTML=`<span class="who">${c.human?'👤':'🤖'} ${esc(c.name)}</span>&nbsp;${c.human?'— pick a card (1–5)':'is choosing…'}`;
+  renderHand(c.human);
+  renderClubs();
+  if(!c.human){
+    setTimeout(()=>{
+      const k=aiPickIndex(c,draft.hand);
+      const el=document.getElementById('d-hand').children[k];
+      if(el) el.classList.add('aipick');
+      setTimeout(()=>commitPick(k), Math.max(500,aiDelay));
+    }, aiDelay);
+  }
+}
+function renderHand(clickable){
+  document.getElementById('d-hand').innerHTML=draft.hand.map((p,k)=>`
+    <div class="hcard ${clickable?'':'disabled'}" onclick="humanPick(${k})">
+      <div class="stripe" style="background:${LG[p[2]][1]}"></div>
+      <div class="r">${p[4]}</div>
+      <div class="nm">${esc(p[0])}</div>
+      <div class="mt">${p[3]} · ${esc(p[1])}</div>
+      <div class="key">${clickable?('press '+(k+1)):''}</div>
+    </div>`).join('');
+}
+function aiPickIndex(c,hand){
+  const n=posCount(c);
+  let best=0,bs=-1e9;
+  hand.forEach((p,k)=>{
+    const pos=p[3];
+    const bonus = n[pos]<MIN_NEED[pos]?7 : n[pos]<TARGET[pos]?2 : -5;
+    const s=p[4]+bonus+Math.random()*1.5;
+    if(s>bs){bs=s;best=k;}
+  });
+  return best;
+}
+function humanPick(k){ if(draftMode&&draft.picking&&draftClub().human) commitPick(k); }
+function commitPick(k){
+  if(!draft.picking) return; draft.picking=false;
+  const c=draftClub(), p=draft.hand[k];
+  pool.splice(pool.indexOf(p),1);
+  c.squad.push({p, price:0});
+  log(`<span class="bid">${esc(c.name)}</span> drafts <span class="bid">${esc(p[0])}</span> (${p[3]}, ${p[4]})`);
+  draft.count++;
+  renderClubs();
+  draftNext();
+}
+
+/* ---------- lot lifecycle ---------- */
+function nextBidAmt(){ if(!lot.leader) return lot.p[5]; const b=lot.bid; return b + (b<10?1:b<30?2:b<60?5:10); }
+
+function nextLot(){
+  if(lotIdx>=pool.length || clubs.every(c=>c.squad.length>=SQUAD_CAP||c.budget<1)){ toSeason(); return; }
+  const p=pool[lotIdx];
+  lot={p, bid:0, leader:null, passed:new Set(), turn:starter, vals:clubs.map(c=>aiValue(c,p))};
+  starter=(starter+1)%clubs.length;
+  // clubs that can't participate at all pass immediately
+  if(!manualMode) clubs.forEach(c=>{ if(c.squad.length>=SQUAD_CAP || c.budget<p[5]) lot.passed.add(c.id); });
+  renderLot(); renderClubs(); log(`— Lot ${lotIdx+1}: <span class="bid">${p[0]}</span> (base ${money(p[5])})`);
+  if(manualMode) renderManual(); else step();
+}
+
+/* ---------- manual (auctioneer) mode ---------- */
+function renderManual(){
+  const need=nextBidAmt();
+  const btns=clubs.map(c=>{
+    const ok=c.squad.length<SQUAD_CAP && c.budget>=need && !(lot.leader&&lot.leader.id===c.id);
+    return `<button class="btn gray" ${ok?'':'disabled'} onclick="manualBid(${c.id})">${esc(c.name)} · ${money(need)}</button>`;
+  }).join('');
+  setTurnbar(`<div style="width:100%;font-size:12px;color:var(--dim)">🎙️ Auctioneer — tap the club that bids</div>
+    ${btns}
+    <button class="btn" ${lot.leader?'':'disabled'} onclick="manualSell()">🔨 Sell</button>
+    <button class="btn red" onclick="manualUnsold()">Unsold</button>`);
+}
+function manualBid(id){
+  if(lot.done) return;
+  const c=clubs[id], need=nextBidAmt();
+  if(c.squad.length>=SQUAD_CAP||c.budget<need||(lot.leader&&lot.leader.id===c.id))return;
+  lot.bid=need; lot.leader=c;
+  log(`<span class="bid">${esc(c.name)}</span> bids <span class="bid">${money(need)}</span>`);
+  renderLot(); renderClubs(); renderManual();
+}
+function manualSell(){ if(!lot.done&&lot.leader) settle(true); }
+function manualUnsold(){ if(lot.done)return; if(!lot.leader||confirm('A bid exists — mark unsold anyway?')){ lot.leader=null; lot.bid=0; settle(false);} }
+
+function aiValue(c,p){
+  const n=posCount(c), pos=p[3];
+  const needMult = n[pos]<MIN_NEED[pos]?1.35 : n[pos]<TARGET[pos]?1.05 : 0.65;
+  const star = 1 + Math.max(0,(p[4]-84))*0.06;
+  return Math.min(p[5]*(1.0+Math.random()*0.6)*needMult*star*c.aggr, c.budget*0.38);
+}
+function reserve(c){ return Math.max(0, 11-c.squad.length-1)*6; }
+
+function activeClubs(){ return clubs.filter(c=>!lot.passed.has(c.id)); }
+
+function step(){
+  const act=activeClubs();
+  if(lot.leader && act.length===1 && act[0].id===lot.leader.id){ return settle(true); }
+  if(!lot.leader && act.length===0){ return settle(false); }
+  // find next club to act (skip passed + current leader)
+  let guard=0;
+  while(lot.passed.has(clubs[lot.turn].id) || (lot.leader&&clubs[lot.turn].id===lot.leader.id)){
+    lot.turn=(lot.turn+1)%clubs.length; if(++guard>12) return settle(!!lot.leader);
+  }
+  const c=clubs[lot.turn];
+  const need=nextBidAmt();
+  if(c.budget<need || c.squad.length>=SQUAD_CAP){ doPass(c,true); return; }
+  renderClubs();
+  if(c.human){
+    awaitingHuman=true;
+    setTurnbar(`<span class="who">🎤 ${esc(c.name)}</span> — your move
+      <button class="btn" onclick="humanBid()">Bid ${money(need)}</button>
+      <button class="btn gray" onclick="humanPass()">Pass</button>`);
+  }else{
+    awaitingHuman=false;
+    setTurnbar(`<span class="who">🤖 ${esc(c.name)}</span> is thinking…`);
+    setTimeout(()=>{
+      const val=lot.vals[c.id];
+      if(need<=val && c.budget-reserve(c)>=need) doBid(c); else doPass(c,false);
+    }, aiDelay);
+  }
+}
+
+function humanBid(){ if(!awaitingHuman)return; awaitingHuman=false; doBid(clubs[lot.turn]); }
+function humanPass(){ if(!awaitingHuman)return; awaitingHuman=false; doPass(clubs[lot.turn],false); }
+document.addEventListener('keydown',e=>{
+  if(draftMode&&draft&&draft.picking&&'12345'.includes(e.key)){ humanPick(+e.key-1); return; }
+  if(!awaitingHuman)return;
+  if(e.key==='b'||e.key==='B') humanBid();
+  if(e.key==='p'||e.key==='P') humanPass();
+});
+
+function doBid(c){
+  lot.bid=nextBidAmt(); lot.leader=c;
+  log(`<span class="bid">${esc(c.name)}</span> bids <span class="bid">${money(lot.bid)}</span>`);
+  lot.turn=(lot.turn+1)%clubs.length;
+  renderLot(); step();
+}
+function doPass(c,auto){
+  lot.passed.add(c.id);
+  log(`${esc(c.name)} passes${auto?' (can’t afford / squad full)':''}`);
+  lot.turn=(lot.turn+1)%clubs.length;
+  renderClubs(); step();
+}
+
+function settle(sold){
+  if(lot.done) return; lot.done=true;
+  const h=document.getElementById('hammer'), big=document.getElementById('hammer-big'), sub=document.getElementById('hammer-sub');
+  if(sold){
+    const c=lot.leader;
+    c.budget-=lot.bid; c.squad.push({p:lot.p, price:lot.bid});
+    big.textContent='SOLD!'; big.className='big sold';
+    sub.textContent=`${lot.p[0]} → ${c.name} for ${money(lot.bid)}`;
+    log(`🔨 <span class="bid">SOLD — ${lot.p[0]} → ${esc(c.name)} (${money(lot.bid)})</span>`);
+  }else{
+    big.textContent='UNSOLD'; big.className='big unsold';
+    sub.textContent=`No bids for ${lot.p[0]}`;
+    log(`🔨 ${lot.p[0]} goes unsold`);
+  }
+  renderClubs(); h.classList.add('show');
+  setTimeout(()=>{ h.classList.remove('show'); lotIdx++; nextLot(); }, Math.max(900,aiDelay*2));
+}
+
+function endAuctionEarly(){ if(confirm('End the auction and go to the season?')) toSeason(); }
+
+/* ---------- auction rendering ---------- */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function setTurnbar(html){document.getElementById('turnbar').innerHTML=html;}
+function renderLot(){
+  const p=lot.p;
+  document.getElementById('p-stripe').style.background=LG[p[2]][1];
+  document.getElementById('p-lot').textContent=`Lot ${lotIdx+1} of ${pool.length}`;
+  document.getElementById('p-name').textContent=p[0];
+  document.getElementById('p-meta').textContent=`${p[1]} · ${LG[p[2]][0]}`;
+  document.getElementById('p-badges').innerHTML=
+    `<span class="badge pos-${p[3]}">${p[3]}</span><span class="badge" style="color:${LG[p[2]][1]}">${LG[p[2]][0]}</span>`;
+  document.getElementById('p-rating').textContent=p[4];
+  document.getElementById('p-base').textContent=money(p[5]);
+  document.getElementById('p-bid').textContent=lot.leader?money(lot.bid):'—';
+  document.getElementById('p-leader').textContent=lot.leader?lot.leader.name:'—';
+}
+function renderClubs(){
+  const box=document.getElementById('club-panels');
+  box.innerHTML=clubs.map(c=>{
+    const n=posCount(c), passed=!manualMode&&!draftMode&&lot&&lot.passed.has(c.id);
+    const isTurn=draftMode ? (draft&&draft.clubId===c.id) : (!manualMode&&lot&&clubs[lot.turn].id===c.id&&!passed);
+    const leading=!draftMode&&lot&&lot.leader&&lot.leader.id===c.id;
+    const slots=Array.from({length:SQUAD_CAP},(_,i)=>{
+      const s=c.squad[i];
+      return `<div class="slot ${s?'filled':''}" title="${s?esc(s.p[0])+' '+money(s.price):''}">${s?s.p[3][0]:i+1}</div>`;
+    }).join('');
+    const needs=Object.keys(MIN_NEED).map(k=>
+      `<span><b class="${n[k]>=MIN_NEED[k]?'ok':''}">${k} ${n[k]}</b>/${MIN_NEED[k]}</span>`).join('');
+    let status = draftMode?(isTurn?'Picking…':''):leading?'⭐ Leading bid':passed?'Passed':isTurn?'On the clock…':'';
+    return `<div class="card club ${isTurn?'turn':''} ${passed?'out':''}">
+      <div class="chead"><span class="cname">${c.human?'👤':'🤖'} ${esc(c.name)}</span>
+        <span class="cbudget">${draftMode?(c.squad.length+' picks'):money(c.budget)}</span></div>
+      <div class="slots">${slots}</div>
+      <div class="needs">${needs}<span><b>${c.squad.length}</b>/${SQUAD_CAP} slots</span></div>
+      <div class="statusline">${status}</div>
+    </div>`;
+  }).join('');
+}
+function log(html){
+  const el=document.getElementById('log');
+  el.insertAdjacentHTML('afterbegin',`<div>${html}</div>`);
+  while(el.children.length>40) el.removeChild(el.lastChild);
+}
+
+/* ================= SEASON ================= */
+const GHOST={name:'Ghost (unfilled)',rating:55};
+function bestXI(c){
+  const by={GK:[],DEF:[],MID:[],FWD:[]};
+  c.squad.forEach(s=>by[s.p[3]].push(s));
+  Object.values(by).forEach(a=>a.sort((x,y)=>y.p[4]-x.p[4]));
+  const xi=[], take=(pos,k)=>{for(let i=0;i<k;i++){const s=by[pos].shift(); xi.push(s||{ghost:true,pos});}};
+  take('GK',1);take('DEF',3);take('MID',3);take('FWD',1);
+  const rest=[...by.GK.slice(0,0),...by.DEF,...by.MID,...by.FWD].sort((x,y)=>y.p[4]-x.p[4]);
+  while(xi.length<11){const s=rest.shift(); xi.push(s||{ghost:true,pos:'—'});}
+  return xi;
+}
+function xiRating(xi){ return xi.reduce((t,s)=>t+(s.ghost?GHOST.rating:s.p[4]),0)/11; }
+function poisson(l){let L=Math.exp(-l),k=0,p=1;do{k++;p*=Math.random();}while(p>L);return k-1;}
+
+function toSeason(){
+  show('scr-season');
+  const box=document.getElementById('squads');
+  box.innerHTML=clubs.map(c=>{
+    const xi=bestXI(c), xiSet=new Set(xi.filter(s=>!s.ghost).map(s=>s.p[0]));
+    const rows=c.squad.sort((a,b)=>b.p[4]-a.p[4]).map(s=>
+      `<tr class="${xiSet.has(s.p[0])?'xi':''}"><td>${s.p[3]}</td><td>${esc(s.p[0])}</td>
+       <td style="color:var(--dim)">${money(s.price)}</td><td class="r">${s.p[4]}</td></tr>`).join('');
+    const ghosts=xi.filter(s=>s.ghost).length;
+    return `<div class="card sq"><div class="chead"><span class="cname">${c.human?'👤':'🤖'} ${esc(c.name)}</span>
+      <span class="cbudget">XI ${xiRating(xi).toFixed(1)}</span></div>
+      <div class="sub">${c.squad.length} players${draftMode?'':' · '+money(c.budget)+' left'}${ghosts?` · ⚠️ ${ghosts} ghost(s) in XI`:''}</div>
+      <table>${rows||'<tr><td colspan=4 style="color:var(--dim)">No players bought</td></tr>'}</table></div>`;
+  }).join('');
+}
+
+function simulateSeason(){
+  const R=clubs.map(c=>({c, r:xiRating(bestXI(c)), pts:0,w:0,d:0,l:0,gf:0,ga:0}));
+  const results=[];
+  for(let i=0;i<R.length;i++)for(let j=0;j<R.length;j++){
+    if(i===j)continue;
+    const A=R[i],B=R[j];
+    const diff=A.r-B.r;
+    const ga=poisson(Math.min(4.2,Math.max(.15,1.45+diff*.11))); // home boost
+    const gb=poisson(Math.min(4.2,Math.max(.15,1.15-diff*.11)));
+    A.gf+=ga;A.ga+=gb;B.gf+=gb;B.ga+=ga;
+    if(ga>gb){A.pts+=3;A.w++;B.l++;} else if(gb>ga){B.pts+=3;B.w++;A.l++;} else {A.pts++;B.pts++;A.d++;B.d++;}
+    results.push(`<div class="match"><span>${esc(A.c.name)} vs ${esc(B.c.name)}</span><span class="score">${ga} – ${gb}</span></div>`);
+  }
+  R.sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf);
+  const champ=R[0];
+  document.getElementById('champ-slot').innerHTML=
+    `<div class="champbanner"><div style="font-size:44px">🏆</div>
+     <div class="t">${esc(champ.c.name)}</div><div class="sub">Champions — ${champ.pts} pts (${champ.w}W ${champ.d}D ${champ.l}L)</div></div>`;
+  document.getElementById('stand-card').style.display='block';
+  document.getElementById('standings').innerHTML=
+    `<tr><th>#</th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>`+
+    R.map((t,i)=>`<tr class="${i===0?'champ':''}"><td>${i+1}</td><td>${t.c.human?'👤':'🤖'} ${esc(t.c.name)}</td>
+      <td>${t.w+t.d+t.l}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td>
+      <td>${t.gf}</td><td>${t.ga}</td><td>${t.gf-t.ga>0?'+':''}${t.gf-t.ga}</td><td class="pts">${t.pts}</td></tr>`).join('');
+  document.getElementById('match-card').style.display='block';
+  document.getElementById('matches').innerHTML=results.join('');
+  document.getElementById('btn-sim').textContent='↻ Re-simulate';
+}
+</script>
+</body>
+</html>

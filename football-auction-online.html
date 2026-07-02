@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Top 5 League Auction — Online</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  :root{--bg:#0b0e14;--panel:#141926;--panel2:#1b2233;--line:#2a3245;--txt:#e8ecf5;--dim:#8b94a8;
+    --gold:#f5c542;--green:#3ddc84;--red:#ff5d5d;--blue:#4da3ff}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 600px at 50% -10%,#1a2340 0%,var(--bg) 60%);color:var(--txt);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;min-height:100vh}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px}
+  h1{font-size:26px;letter-spacing:2px;text-transform:uppercase}
+  .sub{color:var(--dim);font-size:13px;margin-top:2px}
+  .screen{display:none}.screen.active{display:block}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  button{cursor:pointer;border:none;border-radius:10px;font-weight:700;font-family:inherit}
+  .btn{background:var(--gold);color:#1a1400;padding:12px 22px;font-size:15px}
+  .btn.gray{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+  .btn.red{background:var(--red);color:#fff}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  select,input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    border-radius:8px;padding:10px 12px;font-size:15px;font-family:inherit}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .opt-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+  .opt-row:last-child{border:none}
+  label.lbl{color:var(--dim);font-size:14px}
+  .code{font-size:40px;font-weight:900;letter-spacing:10px;color:var(--gold);text-align:center;padding:10px}
+  .plist{margin-top:10px}
+  .plist div{padding:9px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+  .steps{color:var(--dim);font-size:14px;line-height:1.9}
+  .steps b{color:var(--txt)} .steps code{background:var(--panel2);padding:2px 6px;border-radius:6px;font-size:12px;color:var(--gold)}
+  .auction-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;margin-top:14px}
+  @media(max-width:900px){.auction-grid{grid-template-columns:1fr}}
+  .lotnum{color:var(--dim);font-size:12px;letter-spacing:2px;text-transform:uppercase}
+  .pcard{position:relative;overflow:hidden;text-align:center;padding:26px 16px 20px}
+  .pcard .stripe{position:absolute;top:0;left:0;right:0;height:6px}
+  .pname{font-size:30px;font-weight:800;margin-top:6px}
+  .pmeta{color:var(--dim);font-size:14px;margin-top:4px}
+  .badges{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+  .badge{padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--panel2)}
+  .rating{font-size:52px;font-weight:900;color:var(--gold);line-height:1;margin-top:14px}
+  .rating small{font-size:13px;color:var(--dim);display:block;font-weight:600;letter-spacing:2px}
+  .bidbox{display:flex;justify-content:center;gap:26px;margin-top:16px}
+  .bidbox .v{font-size:24px;font-weight:800}
+  .bidbox .k{font-size:11px;color:var(--dim);letter-spacing:1px;text-transform:uppercase}
+  .leader{color:var(--green)}
+  .turnbar{margin-top:16px;padding:12px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);
+    font-size:15px;min-height:52px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+  .who{font-weight:800}
+  .hammer{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(11,14,20,.88);z-index:5;flex-direction:column;gap:8px}
+  .hammer.show{display:flex}
+  .hammer .big{font-size:40px;font-weight:900}
+  .hammer .big.sold{color:var(--green)}.hammer .big.unsold{color:var(--dim)}
+  .log{margin-top:14px;max-height:150px;overflow-y:auto;font-size:13px;color:var(--dim)}
+  .log div{padding:3px 0;border-bottom:1px dashed #222a3c}
+  .log .bid{color:var(--txt)}
+  .clubs{display:flex;flex-direction:column;gap:10px}
+  .club{padding:12px}.club.turn{outline:2px solid var(--gold)}.club.out{opacity:.55}.club.me{border-color:var(--blue)}
+  .chead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .cname{font-weight:800;font-size:15px}
+  .cbudget{font-weight:800;color:var(--gold)}
+  .slots{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap}
+  .slot{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;
+    justify-content:center;font-size:10px;color:var(--dim);background:var(--panel2)}
+  .slot.filled{background:var(--gold);color:#1a1400;font-weight:800;border-color:var(--gold)}
+  .needs{display:flex;gap:10px;margin-top:8px;font-size:11px;color:var(--dim);flex-wrap:wrap}
+  .needs b{color:var(--txt)}.needs .ok{color:var(--green)}
+  .statusline{font-size:12px;color:var(--dim);margin-top:6px;font-style:italic;min-height:15px}
+  .hand{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin-top:12px}
+  .hcard{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 8px 10px;text-align:center;
+    cursor:pointer;position:relative;overflow:hidden}
+  .hcard:hover{border-color:var(--gold)}
+  .hcard .stripe{position:absolute;top:0;left:0;right:0;height:4px}
+  .hcard .r{font-size:26px;font-weight:900;color:var(--gold)}
+  .hcard .nm{font-weight:700;font-size:13px;margin-top:5px;min-height:34px}
+  .hcard .mt{font-size:11px;color:var(--dim);margin-top:2px}
+  .hcard.disabled{pointer-events:none;opacity:.75}
+  .squads{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px}
+  .sq table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  .sq td{padding:4px 6px;border-bottom:1px solid #202a3e}
+  .sq td.r{text-align:right;color:var(--gold);font-weight:700}
+  .xi{background:rgba(61,220,132,.07)}
+  .stand{width:100%;border-collapse:collapse;font-size:14px;margin-top:12px}
+  .stand th{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:8px;text-align:left}
+  .stand td{padding:9px 8px;border-top:1px solid var(--line)}
+  .stand tr.champ td{background:rgba(245,197,66,.08)}
+  .stand .pts{font-weight:900;color:var(--gold)}
+  .matches{margin-top:14px;max-height:260px;overflow-y:auto;font-size:14px}
+  .match{display:flex;justify-content:space-between;padding:7px 10px;border-bottom:1px solid #202a3e}
+  .match .score{font-weight:800}
+  .champbanner{text-align:center;padding:26px;margin-top:14px;border:1px solid var(--gold);border-radius:14px;
+    background:linear-gradient(180deg,rgba(245,197,66,.12),transparent)}
+  .champbanner .t{font-size:34px;font-weight:900;color:var(--gold)}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .footer-note{color:#5a6478;font-size:11px;margin-top:20px;text-align:center}
+  .pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:12px;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- CONFIG / SETUP GUIDE -->
+  <div class="screen" id="scr-config">
+    <h1>⚽ Online Auction — one-time setup</h1>
+    <div class="sub">This page needs a free Firebase project to sync bids between devices. Takes ~5 minutes, no credit card.</div>
+    <div class="card" style="margin-top:14px">
+      <div class="steps">
+        1. Go to <b>console.firebase.google.com</b> → <b>Add project</b> (any name, Analytics off is fine).<br>
+        2. In the left menu: <b>Build → Realtime Database → Create database</b> → choose a location → start in <b>test mode</b>.<br>
+        &nbsp;&nbsp;&nbsp;(Test mode is open for 30 days — fine for casual games. To keep it open longer, set rules to
+        <code>{"rules":{"rooms":{".read":true,".write":true}}}</code>.)<br>
+        3. Click the <b>⚙️ gear → Project settings</b> → under "Your apps" click the <b>&lt;/&gt; web</b> icon → register the app (no hosting needed).<br>
+        4. Copy the <code>firebaseConfig = {...}</code> object it shows you.<br>
+        5. Open <b>this HTML file in a text editor</b>, find <code>const FIREBASE_CONFIG</code> near the top of the script, and paste your values over the placeholders. Save.<br>
+        6. To play with friends on other devices, put the file online: drag it into <b>app.netlify.com/drop</b> (free, instant URL) or use GitHub Pages. Share that URL — everyone opens it, one person hosts a room and the rest join with the 4-letter code.<br>
+      </div>
+    </div>
+    <div class="footer-note">Tip: the offline version of this game (pass-and-play + AI + manual auctioneer) needs none of this.</div>
+  </div>
+
+  <!-- LANDING -->
+  <div class="screen" id="scr-landing">
+    <h1>⚽ Top 5 League Auction — Online</h1>
+    <div class="sub">Auction or draft against your friends in real time. One person hosts, everyone else joins with the room code.</div>
+    <div class="card" style="max-width:520px;margin:16px auto">
+      <div class="opt-row"><label class="lbl">Your club name</label><input type="text" id="in-name" maxlength="18" placeholder="e.g. Thunder FC"></div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn" style="flex:1" onclick="createRoom()">🏠 Host a room</button>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <input type="text" id="in-code" maxlength="4" placeholder="CODE" style="width:110px;text-transform:uppercase;letter-spacing:4px;text-align:center">
+        <button class="btn gray" style="flex:1" onclick="joinRoom()">Join a room</button>
+      </div>
+      <div class="sub" id="landing-err" style="color:var(--red);margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- LOBBY -->
+  <div class="screen" id="scr-lobby">
+    <h1>🏟️ Lobby</h1>
+    <div class="code" id="lobby-code"></div>
+    <div class="sub" style="text-align:center">Share this code (and this page URL) with your friends.</div>
+    <div class="auction-grid">
+      <div class="card"><b>Players</b><div class="plist" id="lobby-players"></div></div>
+      <div class="card" id="lobby-settings">
+        <b>Rules <span class="pill" id="host-pill"></span></b>
+        <div class="opt-row"><label class="lbl">Mode</label>
+          <select id="set-mode" onchange="saveSettings()"><option value="auction">Auction (bid in turns)</option><option value="draft">Draft (pick from 5 cards)</option></select></div>
+        <div class="opt-row"><label class="lbl">Budget per club</label>
+          <select id="set-budget" onchange="saveSettings()"><option value="300">€300m</option><option value="400" selected>€400m</option><option value="500">€500m</option></select></div>
+        <div class="opt-row"><label class="lbl">Player pool</label>
+          <select id="set-pool" onchange="saveSettings()"><option value="50">Top 50</option><option value="100" selected>Top 100</option><option value="150">Full 150</option></select></div>
+        <div class="opt-row"><label class="lbl">AI clubs (host-run)</label>
+          <select id="set-ai" onchange="saveSettings()"><option value="0" selected>0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></div>
+        <button class="btn" style="width:100%;margin-top:12px" id="btn-start" onclick="hostStart()">▶ Start</button>
+        <div class="sub" style="margin-top:8px">Need at least 2 clubs total (players + AI). Only the host can start.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUCTION / DRAFT -->
+  <div class="screen" id="scr-auction">
+    <div class="topbar">
+      <div><h1 id="auction-title">🔨 Auction Room</h1><div class="sub" id="auction-sub"></div></div>
+      <button class="btn red" id="btn-end" style="display:none" onclick="hostEndEarly()">End → Season</button>
+    </div>
+    <div class="auction-grid">
+      <div>
+        <div class="card pcard" id="pcard">
+          <div class="stripe" id="p-stripe"></div>
+          <div class="lotnum" id="p-lot"></div>
+          <div class="pname" id="p-name"></div>
+          <div class="pmeta" id="p-meta"></div>
+          <div class="badges" id="p-badges"></div>
+          <div class="rating"><span id="p-rating"></span><small>RATING</small></div>
+          <div class="bidbox">
+            <div><div class="v" id="p-base"></div><div class="k">Base price</div></div>
+            <div><div class="v" id="p-bid">—</div><div class="k">Current bid</div></div>
+            <div><div class="v leader" id="p-leader">—</div><div class="k">Leading</div></div>
+          </div>
+          <div class="turnbar" id="turnbar"></div>
+          <div class="hammer" id="hammer"><div class="big" id="hammer-big"></div><div id="hammer-sub" class="sub"></div></div>
+        </div>
+        <div class="card" id="draftbox" style="display:none">
+          <div class="lotnum" id="d-round"></div>
+          <div class="turnbar" id="d-turn" style="margin-top:10px"></div>
+          <div class="hand" id="d-hand"></div>
+        </div>
+        <div class="card" style="margin-top:12px"><b style="font-size:13px">Log</b><div class="log" id="log"></div></div>
+      </div>
+      <div class="clubs" id="club-panels"></div>
+    </div>
+  </div>
+
+  <!-- SEASON -->
+  <div class="screen" id="scr-season">
+    <div class="topbar">
+      <div><h1>🏆 Season</h1><div class="sub">Double round-robin, simulated by the host.</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="btn-sim" style="display:none" onclick="hostSimSeason()">▶ Simulate Season</button>
+        <button class="btn gray" onclick="location.reload()">↺ Leave</button>
+      </div>
+    </div>
+    <div id="champ-slot"></div>
+    <div class="card" id="stand-card" style="margin-top:14px;display:none"><b>Table</b><table class="stand" id="standings"></table></div>
+    <div class="card" id="match-card" style="margin-top:14px;display:none"><b>Results</b><div class="matches" id="matches"></div></div>
+    <h3 style="margin-top:20px">Squads</h3>
+    <div class="squads" id="squads"></div>
+  </div>
+
+  <div class="footer-note">Mock game — player pool, clubs and ratings are approximate and for fun only.</div>
+</div>
+
+<script>
+/* =========================================================
+   PASTE YOUR FIREBASE CONFIG HERE (see setup guide on screen)
+   ========================================================= */
+const FIREBASE_CONFIG = {
+  apiKey: "PASTE_YOURS",
+  authDomain: "PASTE_YOURS.firebaseapp.com",
+  databaseURL: "https://PASTE_YOURS-default-rtdb.firebaseio.com",
+  projectId: "PASTE_YOURS",
+  storageBucket: "PASTE_YOURS.appspot.com",
+  messagingSenderId: "0",
+  appId: "PASTE_YOURS"
+};
+
+/* ================= SHARED DATA ================= */
+const LG = {
+  EPL:['Premier League','#803ce8'], LIGA:['La Liga','#ff7a29'], SA:['Serie A','#2ea8ff'],
+  BUN:['Bundesliga','#e33b3b'], L1:['Ligue 1','#ffd23f']
+};
+/* [name, club, league, pos, rating, base €m] */
+const PLAYERS = [
+ ["Erling Haaland","Man City","EPL","FWD",91,40],["Mohamed Salah","Liverpool","EPL","FWD",90,35],
+ ["Rodri","Man City","EPL","MID",90,35],["Bukayo Saka","Arsenal","EPL","FWD",88,30],
+ ["Cole Palmer","Chelsea","EPL","MID",88,30],["Alexander Isak","Liverpool","EPL","FWD",88,30],
+ ["Florian Wirtz","Liverpool","EPL","MID",89,32],["Virgil van Dijk","Liverpool","EPL","DEF",89,25],
+ ["William Saliba","Arsenal","EPL","DEF",87,25],["Declan Rice","Arsenal","EPL","MID",87,25],
+ ["Martin Ødegaard","Arsenal","EPL","MID",87,25],["Phil Foden","Man City","EPL","MID",86,22],
+ ["Bruno Fernandes","Man United","EPL","MID",87,22],["Alisson Becker","Liverpool","EPL","GK",88,20],
+ ["Ederson","Man City","EPL","GK",86,15],["Gabriel Magalhães","Arsenal","EPL","DEF",85,18],
+ ["Ollie Watkins","Aston Villa","EPL","FWD",84,15],["Anthony Gordon","Newcastle","EPL","FWD",84,15],
+ ["Moisés Caicedo","Chelsea","EPL","MID",86,22],["Rúben Dias","Man City","EPL","DEF",86,20],
+ ["Kylian Mbappé","Real Madrid","LIGA","FWD",92,45],["Vinícius Júnior","Real Madrid","LIGA","FWD",90,38],
+ ["Jude Bellingham","Real Madrid","LIGA","MID",90,38],["Lamine Yamal","Barcelona","LIGA","FWD",91,42],
+ ["Raphinha","Barcelona","LIGA","FWD",88,28],["Robert Lewandowski","Barcelona","LIGA","FWD",86,18],
+ ["Pedri","Barcelona","LIGA","MID",89,30],["Federico Valverde","Real Madrid","LIGA","MID",88,28],
+ ["Rodrygo","Real Madrid","LIGA","FWD",86,22],["Trent Alexander-Arnold","Real Madrid","LIGA","DEF",86,22],
+ ["Antonio Rüdiger","Real Madrid","LIGA","DEF",85,16],["Éder Militão","Real Madrid","LIGA","DEF",85,16],
+ ["Thibaut Courtois","Real Madrid","LIGA","GK",89,22],["Marc-André ter Stegen","Barcelona","LIGA","GK",86,14],
+ ["Jan Oblak","Atlético Madrid","LIGA","GK",87,16],["Antoine Griezmann","Atlético Madrid","LIGA","FWD",85,14],
+ ["Julián Álvarez","Atlético Madrid","LIGA","FWD",88,30],["Nico Williams","Athletic Club","LIGA","FWD",86,24],
+ ["Gavi","Barcelona","LIGA","MID",85,18],["Frenkie de Jong","Barcelona","LIGA","MID",86,18],
+ ["Lautaro Martínez","Inter","SA","FWD",88,28],["Marcus Thuram","Inter","SA","FWD",86,20],
+ ["Nicolò Barella","Inter","SA","MID",87,24],["Hakan Çalhanoğlu","Inter","SA","MID",86,18],
+ ["Alessandro Bastoni","Inter","SA","DEF",87,22],["Mike Maignan","AC Milan","SA","GK",87,18],
+ ["Rafael Leão","AC Milan","SA","FWD",86,24],["Christian Pulisic","AC Milan","SA","FWD",85,18],
+ ["Theo Hernández","AC Milan","SA","DEF",85,16],["Dušan Vlahović","Juventus","SA","FWD",84,16],
+ ["Kenan Yıldız","Juventus","SA","FWD",85,22],["Gleison Bremer","Juventus","SA","DEF",85,16],
+ ["Scott McTominay","Napoli","SA","MID",85,16],["Romelu Lukaku","Napoli","SA","FWD",84,12],
+ ["Paulo Dybala","Roma","SA","FWD",84,12],["Yann Sommer","Inter","SA","GK",85,10],
+ ["Denzel Dumfries","Inter","SA","DEF",84,12],["Ademola Lookman","Atalanta","SA","FWD",85,18],
+ ["Charles De Ketelaere","Atalanta","SA","MID",84,14],["Federico Dimarco","Inter","SA","DEF",84,12],
+ ["Harry Kane","Bayern","BUN","FWD",90,35],["Jamal Musiala","Bayern","BUN","MID",89,32],
+ ["Michael Olise","Bayern","BUN","FWD",88,28],["Joshua Kimmich","Bayern","BUN","MID",86,18],
+ ["Alphonso Davies","Bayern","BUN","DEF",85,16],["Manuel Neuer","Bayern","BUN","GK",84,8],
+ ["Dayot Upamecano","Bayern","BUN","DEF",84,14],["Serhou Guirassy","Dortmund","BUN","FWD",86,20],
+ ["Karim Adeyemi","Dortmund","BUN","FWD",84,14],["Julian Brandt","Dortmund","BUN","MID",84,12],
+ ["Gregor Kobel","Dortmund","BUN","GK",86,14],["Nico Schlotterbeck","Dortmund","BUN","DEF",85,14],
+ ["Xavi Simons","RB Leipzig","BUN","MID",86,22],["Loïs Openda","RB Leipzig","BUN","FWD",85,18],
+ ["Benjamin Šeško","RB Leipzig","BUN","FWD",86,24],["Granit Xhaka","Leverkusen","BUN","MID",84,10],
+ ["Alejandro Grimaldo","Leverkusen","BUN","DEF",85,14],["Jonathan Tah","Bayern","BUN","DEF",85,14],
+ ["Patrik Schick","Leverkusen","BUN","FWD",84,12],["Angelo Stiller","Stuttgart","BUN","MID",84,12],
+ ["Ousmane Dembélé","PSG","L1","FWD",90,32],["Khvicha Kvaratskhelia","PSG","L1","FWD",88,26],
+ ["Vitinha","PSG","L1","MID",89,28],["João Neves","PSG","L1","MID",87,24],
+ ["Achraf Hakimi","PSG","L1","DEF",89,26],["Nuno Mendes","PSG","L1","DEF",87,20],
+ ["Désiré Doué","PSG","L1","FWD",87,26],["Bradley Barcola","PSG","L1","FWD",86,22],
+ ["Marquinhos","PSG","L1","DEF",85,12],["Gianluigi Donnarumma","PSG","L1","GK",89,20],
+ ["Willian Pacho","PSG","L1","DEF",85,14],["Fabián Ruiz","PSG","L1","MID",85,12],
+ ["Alexandre Lacazette","Lyon","L1","FWD",82,8],["Rayan Cherki","Lyon","L1","MID",85,18],
+ ["Jonathan David","Lille","L1","FWD",85,16],["Lucas Chevalier","Lille","L1","GK",84,10],
+ ["Mason Greenwood","Marseille","L1","FWD",85,16],["Adrien Rabiot","Marseille","L1","MID",83,8],
+ ["Pierre-Emerick Aubameyang","Marseille","L1","FWD",81,6],["Leonardo Balerdi","Marseille","L1","DEF",82,8],
+ ["Kai Havertz","Arsenal","EPL","FWD",84,14],["Jordan Pickford","Everton","EPL","GK",85,10],
+ ["Cristian Romero","Tottenham","EPL","DEF",85,16],["Micky van de Ven","Tottenham","EPL","DEF",85,16],
+ ["Eberechi Eze","Arsenal","EPL","MID",85,18],["Morgan Rogers","Aston Villa","EPL","MID",84,16],
+ ["Bryan Mbeumo","Man United","EPL","FWD",85,18],["Matheus Cunha","Man United","EPL","FWD",84,16],
+ ["Enzo Fernández","Chelsea","EPL","MID",85,18],["Marc Guéhi","Crystal Palace","EPL","DEF",84,14],
+ ["Dani Olmo","Barcelona","LIGA","MID",85,16],["Jules Koundé","Barcelona","LIGA","DEF",85,16],
+ ["Pau Cubarsí","Barcelona","LIGA","DEF",85,18],["Alejandro Balde","Barcelona","LIGA","DEF",84,14],
+ ["Arda Güler","Real Madrid","LIGA","MID",85,18],["Aurélien Tchouaméni","Real Madrid","LIGA","MID",85,16],
+ ["Eduardo Camavinga","Real Madrid","LIGA","MID",85,16],["Dean Huijsen","Real Madrid","LIGA","DEF",85,16],
+ ["Mikel Oyarzabal","Real Sociedad","LIGA","FWD",84,12],["Unai Simón","Athletic Club","LIGA","GK",85,12],
+ ["Kevin De Bruyne","Napoli","SA","MID",86,14],["Alessandro Buongiorno","Napoli","SA","DEF",84,12],
+ ["Khéphren Thuram","Juventus","SA","MID",84,12],["Alex Meret","Napoli","SA","GK",83,8],
+ ["Gianluca Mancini","Roma","SA","DEF",83,8],["Moise Kean","Fiorentina","SA","FWD",84,12],
+ ["David de Gea","Fiorentina","SA","GK",84,8],["Artem Dovbyk","Roma","SA","FWD",83,8],
+ ["Youssouf Fofana","AC Milan","SA","MID",83,8],["Nico Paz","Como","SA","MID",84,14],
+ ["Konrad Laimer","Bayern","BUN","MID",83,8],["Kim Min-jae","Bayern","BUN","DEF",84,12],
+ ["Serge Gnabry","Bayern","BUN","FWD",83,8],["Nick Woltemade","Stuttgart","BUN","FWD",84,14],
+ ["Jonathan Burkardt","Frankfurt","BUN","FWD",83,10],["Ritsu Doan","Frankfurt","BUN","MID",83,8],
+ ["Waldemar Anton","Dortmund","BUN","DEF",82,8],["Oliver Baumann","Hoffenheim","BUN","GK",82,6],
+ ["Can Uzun","Frankfurt","BUN","MID",83,10],["Aleksandar Pavlović","Bayern","BUN","MID",84,12],
+ ["Illia Zabarnyi","PSG","L1","DEF",84,16],["Lucas Hernández","PSG","L1","DEF",82,8],
+ ["Warren Zaïre-Emery","PSG","L1","MID",84,14],["Amine Gouiri","Marseille","L1","FWD",83,10],
+ ["Terem Moffi","Nice","L1","FWD",82,8],["Evann Guessand","Nice","L1","FWD",82,8],
+ ["Malick Fofana","Lyon","L1","FWD",84,14],["Georges Mikautadze","Lyon","L1","FWD",83,10],
+ ["Brice Samba","Rennes","L1","GK",83,8],["Pierre Lees-Melou","Brest","L1","MID",81,6]
+];
+
+const SQUAD_CAP=15, MIN_NEED={GK:1,DEF:3,MID:3,FWD:1}, TARGET={GK:2,DEF:5,MID:5,FWD:3};
+const DRAFT_ROUNDS=12, HAND_SIZE=5, AI_DELAY=900, HAMMER_MS=1400;
+
+/* ================= HELPERS ================= */
+function $(id){return document.getElementById(id);}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function money(m){return '€'+m+'m';}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function poisson(l){let L=Math.exp(-l),k=0,p=1;do{k++;p*=Math.random();}while(p>L);return k-1;}
+function squadOf(c){return (c.squad||[]).map(e=>({p:PLAYERS[e.i],price:e.price}));}
+function posCountS(c){const n={GK:0,DEF:0,MID:0,FWD:0};squadOf(c).forEach(s=>n[s.p[3]]++);return n;}
+function bestXI(c){
+  const by={GK:[],DEF:[],MID:[],FWD:[]};
+  squadOf(c).forEach(s=>by[s.p[3]].push(s));
+  Object.values(by).forEach(a=>a.sort((x,y)=>y.p[4]-x.p[4]));
+  const xi=[],take=(pos,k)=>{for(let i=0;i<k;i++){const s=by[pos].shift();xi.push(s||{ghost:true});}};
+  take('GK',1);take('DEF',3);take('MID',3);take('FWD',1);
+  const rest=[...by.DEF,...by.MID,...by.FWD].sort((x,y)=>y.p[4]-x.p[4]);
+  while(xi.length<11){const s=rest.shift();xi.push(s||{ghost:true});}
+  return xi;
+}
+function xiRating(xi){return xi.reduce((t,s)=>t+(s.ghost?55:s.p[4]),0)/11;}
+function incFor(b){return b<10?1:b<30?2:b<60?5:10;}
+function nextBid(st){const p=PLAYERS[st.order[st.lotIdx]];return (st.lot&&st.lot.bid>0)?st.lot.bid+incFor(st.lot.bid):p[5];}
+function passedArr(lot){return lot&&lot.passed?Object.keys(lot.passed).map(Number):[];}
+
+/* ================= CONNECTION ================= */
+const configured=!JSON.stringify(FIREBASE_CONFIG).includes('PASTE');
+let db=null, code=null, roomRef=null, myId=localStorage.getItem('t5-id')||Math.random().toString(36).slice(2,10);
+localStorage.setItem('t5-id',myId);
+let R=null;          // whole room snapshot (everyone renders from this)
+let isHost=false;
+let hostS=null;      // host-authoritative state
+let seenActions={};  // host: processed action keys
+let hammerTimer=null, aiTimer=null;
+
+if(!configured){ show('scr-config'); }
+else{
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db=firebase.database();
+  show('scr-landing');
+}
+
+function myName(){return ($('in-name').value.trim()||'Club '+myId.slice(0,3).toUpperCase());}
+
+function createRoom(){
+  code=Array.from({length:4},()=>"ABCDEFGHJKLMNPQRSTUVWXYZ"[Math.floor(Math.random()*24)]).join('');
+  isHost=true;
+  roomRef=db.ref('rooms/'+code);
+  roomRef.set({host:myId,createdAt:Date.now(),settings:{mode:'auction',budget:400,pool:100,ai:0},
+    players:{[myId]:{name:myName(),ts:Date.now()}}})
+    .then(attach).catch(e=>$('landing-err').textContent='Could not create room: '+e.message);
+}
+function joinRoom(){
+  const c=$('in-code').value.trim().toUpperCase();
+  if(c.length!==4){$('landing-err').textContent='Enter the 4-letter room code.';return;}
+  code=c; roomRef=db.ref('rooms/'+code);
+  roomRef.child('host').once('value').then(s=>{
+    if(!s.exists()){$('landing-err').textContent='Room not found. Check the code.';return;}
+    roomRef.child('state').once('value').then(st=>{
+      if(st.exists()){$('landing-err').textContent='That game already started.';return;}
+      roomRef.child('players/'+myId).set({name:myName(),ts:Date.now()}).then(attach);
+    });
+  }).catch(e=>$('landing-err').textContent='Error: '+e.message);
+}
+function attach(){
+  roomRef.child('players/'+myId).onDisconnect().remove();
+  roomRef.on('value',snap=>{
+    R=snap.val();
+    if(!R){alert('Room closed.');location.reload();return;}
+    isHost=R.host===myId;
+    if(isHost&&R.state&&!hostS) hostS=R.state; // host page refresh: resume authority
+    renderAll();
+  });
+  if(isHost) db.ref('rooms/'+code+'/actions').on('child_added',s=>hostOnAction(s.key,s.val()));
+  // non-hosts also attach action listener if they BECOME host? keep simple: host only.
+}
+function saveSettings(){
+  if(!isHost||!R)return;
+  roomRef.child('settings').set({
+    mode:$('set-mode').value,budget:+$('set-budget').value,pool:+$('set-pool').value,ai:+$('set-ai').value});
+}
+function sendAction(a){db.ref('rooms/'+code+'/actions').push(Object.assign({pid:myId,ts:Date.now()},a));}
+
+/* ================= HOST ENGINE ================= */
+function hWrite(){roomRef.child('state').set(hostS);}
+function hLog(html){hostS.log=[html].concat(hostS.log||[]).slice(0,30);}
+function hClubEligible(i){
+  const c=hostS.clubs[i];
+  return (c.squad||[]).length<SQUAD_CAP && c.budget>=PLAYERS[hostS.order[hostS.lotIdx]][5];
+}
+function hostStart(){
+  if(!isHost)return;
+  const set=R.settings||{mode:'auction',budget:400,pool:100,ai:0};
+  const pids=Object.keys(R.players||{});
+  const total=pids.length+set.ai;
+  if(total<2){alert('Need at least 2 clubs (players + AI).');return;}
+  if(total>6){alert('Max 6 clubs — reduce AI clubs.');return;}
+  const clubs=pids.map(pid=>({name:R.players[pid].name,owner:pid,ai:false,budget:set.budget,squad:[],aggr:1}));
+  for(let k=0;k<set.ai;k++)clubs.push({name:['Bot Rovers','Bot Athletic','Bot Wanderers'][k]||'Bot '+k,owner:null,ai:true,budget:set.budget,aggr:0.9+Math.random()*0.25,squad:[]});
+  const order=shuffle([...PLAYERS.keys()].sort((a,b)=>PLAYERS[b][4]-PLAYERS[a][4]).slice(0,set.pool));
+  hostS={phase:'auction',mode:set.mode,budget:set.budget,order,lotIdx:0,starter:0,clubs,lot:null,draft:null,hammer:null,log:[],season:null};
+  if(set.mode==='draft') hDraftNext(); else hNextLot();
+}
+/* ---- auction ---- */
+function hNextLot(){
+  if(hostS.lotIdx>=hostS.order.length||hostS.clubs.every(c=>(c.squad||[]).length>=SQUAD_CAP||c.budget<1)){hToSeason();return;}
+  const passed={};
+  hostS.clubs.forEach((c,i)=>{if(!hClubEligible(i))passed[i]=true;});
+  hostS.lot={bid:0,leader:-1,turn:hostS.starter,passed,done:false,vals:hostS.clubs.map((c,i)=>hAiVal(c))};
+  hostS.starter=(hostS.starter+1)%hostS.clubs.length;
+  const p=PLAYERS[hostS.order[hostS.lotIdx]];
+  hLog(`— Lot ${hostS.lotIdx+1}: <span class="bid">${p[0]}</span> (base ${money(p[5])})`);
+  hStep();
+}
+function hAiVal(c){
+  const p=PLAYERS[hostS.order[hostS.lotIdx]],n=posCountS(c),pos=p[3];
+  const needMult=n[pos]<MIN_NEED[pos]?1.35:n[pos]<TARGET[pos]?1.05:0.65;
+  const star=1+Math.max(0,(p[4]-84))*0.06;
+  return Math.min(p[5]*(1.0+Math.random()*0.6)*needMult*star*(c.aggr||1),c.budget*0.38);
+}
+function hReserve(c){return Math.max(0,11-(c.squad||[]).length-1)*6;}
+function hStep(){
+  const lot=hostS.lot, n=hostS.clubs.length;
+  const act=[...Array(n).keys()].filter(i=>!lot.passed[i]);
+  if(lot.leader>=0&&act.length===1&&act[0]===lot.leader){hSettle(true);return;}
+  if(lot.leader<0&&act.length===0){hSettle(false);return;}
+  let guard=0;
+  while(lot.passed[lot.turn]||lot.turn===lot.leader){lot.turn=(lot.turn+1)%n;if(++guard>12){hSettle(lot.leader>=0);return;}}
+  const c=hostS.clubs[lot.turn], need=nextBid(hostS);
+  if(c.budget<need||(c.squad||[]).length>=SQUAD_CAP){hPass(lot.turn,true);return;}
+  hWrite();
+  if(c.ai){
+    clearTimeout(aiTimer);
+    aiTimer=setTimeout(()=>{
+      if(!hostS.lot||hostS.lot.done)return;
+      const v=hostS.lot.vals[hostS.lot.turn];
+      if(need<=v&&c.budget-hReserve(c)>=need)hBid(hostS.lot.turn);else hPass(hostS.lot.turn,false);
+    },AI_DELAY);
+  } // humans: wait for action
+}
+function hBid(i){
+  const lot=hostS.lot;
+  lot.bid=nextBid(hostS);lot.leader=i;
+  hLog(`<span class="bid">${esc(hostS.clubs[i].name)}</span> bids <span class="bid">${money(lot.bid)}</span>`);
+  lot.turn=(lot.turn+1)%hostS.clubs.length;
+  hStep();
+}
+function hPass(i,auto){
+  hostS.lot.passed[i]=true;
+  hLog(`${esc(hostS.clubs[i].name)} passes${auto?' (auto)':''}`);
+  hostS.lot.turn=(hostS.lot.turn+1)%hostS.clubs.length;
+  hStep();
+}
+function hSettle(sold){
+  const lot=hostS.lot;if(lot.done)return;lot.done=true;
+  const p=PLAYERS[hostS.order[hostS.lotIdx]];
+  if(sold){
+    const c=hostS.clubs[lot.leader];
+    c.budget-=lot.bid;(c.squad=c.squad||[]).push({i:hostS.order[hostS.lotIdx],price:lot.bid});
+    hostS.hammer={big:'SOLD!',cls:'sold',sub:`${p[0]} → ${c.name} for ${money(lot.bid)}`};
+    hLog(`🔨 <span class="bid">SOLD — ${p[0]} → ${esc(c.name)} (${money(lot.bid)})</span>`);
+  }else{
+    hostS.hammer={big:'UNSOLD',cls:'unsold',sub:`No bids for ${p[0]}`};
+    hLog(`🔨 ${p[0]} goes unsold`);
+  }
+  hWrite();
+  clearTimeout(hammerTimer);
+  hammerTimer=setTimeout(()=>{hostS.hammer=null;hostS.lotIdx++;hNextLot();},HAMMER_MS);
+}
+/* ---- draft ---- */
+function hDraftClub(){const n=hostS.clubs.length,r=Math.floor(hostS.draft.count/n),i=hostS.draft.count%n;return (r%2===0)?i:(n-1-i);}
+function hDraftNext(){
+  if(!hostS.draft)hostS.draft={count:0};
+  if(hostS.draft.count>=DRAFT_ROUNDS*hostS.clubs.length||hostS.order.length===0){hToSeason();return;}
+  const remaining=hostS.order.filter(pi=>!hostS.clubs.some(c=>(c.squad||[]).some(e=>e.i===pi)));
+  if(remaining.length===0){hToSeason();return;}
+  const hand=shuffle([...remaining]).slice(0,Math.min(HAND_SIZE,remaining.length));
+  const ci=hDraftClub();
+  hostS.draft={count:hostS.draft.count,hand,clubIdx:ci,picking:true};
+  hWrite();
+  const c=hostS.clubs[ci];
+  if(c.ai){
+    clearTimeout(aiTimer);
+    aiTimer=setTimeout(()=>{
+      if(!hostS.draft||!hostS.draft.picking)return;
+      const n=posCountS(c);let best=0,bs=-1e9;
+      hostS.draft.hand.forEach((pi,k)=>{
+        const p=PLAYERS[pi],bonus=n[p[3]]<MIN_NEED[p[3]]?7:n[p[3]]<TARGET[p[3]]?2:-5;
+        const s=p[4]+bonus+Math.random()*1.5;if(s>bs){bs=s;best=k;}});
+      hCommitPick(best);
+    },AI_DELAY);
+  }
+}
+function hCommitPick(k){
+  const d=hostS.draft;if(!d||!d.picking)return;d.picking=false;
+  const c=hostS.clubs[d.clubIdx],pi=d.hand[k],p=PLAYERS[pi];
+  (c.squad=c.squad||[]).push({i:pi,price:0});
+  hLog(`<span class="bid">${esc(c.name)}</span> drafts <span class="bid">${esc(p[0])}</span> (${p[3]}, ${p[4]})`);
+  hostS.draft={count:d.count+1};
+  hDraftNext();
+}
+/* ---- season ---- */
+function hToSeason(){
+  clearTimeout(aiTimer);clearTimeout(hammerTimer);
+  hostS.phase='season';hostS.lot=null;hostS.draft=null;hostS.hammer=null;
+  hWrite();
+}
+function hostSimSeason(){
+  if(!isHost||!hostS)return;
+  const Rk=hostS.clubs.map((c,i)=>({i,r:xiRating(bestXI(c)),pts:0,w:0,d:0,l:0,gf:0,ga:0}));
+  const results=[];
+  for(let a=0;a<Rk.length;a++)for(let b=0;b<Rk.length;b++){
+    if(a===b)continue;
+    const A=Rk[a],B=Rk[b],diff=A.r-B.r;
+    const ga=poisson(Math.min(4.2,Math.max(.15,1.45+diff*.11)));
+    const gb=poisson(Math.min(4.2,Math.max(.15,1.15-diff*.11)));
+    A.gf+=ga;A.ga+=gb;B.gf+=gb;B.ga+=ga;
+    if(ga>gb){A.pts+=3;A.w++;B.l++;}else if(gb>ga){B.pts+=3;B.w++;A.l++;}else{A.pts++;B.pts++;A.d++;B.d++;}
+    results.push({a,b,ga,gb});
+  }
+  Rk.sort((x,y)=>y.pts-x.pts||(y.gf-y.ga)-(x.gf-x.ga)||y.gf-x.gf);
+  hostS.season={table:Rk,results};
+  hWrite();
+}
+function hostEndEarly(){if(isHost&&confirm('End and go to the season?'))hToSeason();}
+/* ---- host action processing ---- */
+function hostOnAction(key,a){
+  if(seenActions[key]||!hostS||!a)return;seenActions[key]=true;
+  if(hostS.phase!=='auction')return;
+  if(hostS.mode==='draft'){
+    const d=hostS.draft;
+    if(a.type==='pick'&&d&&d.picking&&hostS.clubs[d.clubIdx]&&hostS.clubs[d.clubIdx].owner===a.pid&&a.k>=0&&a.k<d.hand.length)hCommitPick(a.k);
+    return;
+  }
+  const lot=hostS.lot;if(!lot||lot.done)return;
+  const c=hostS.clubs[lot.turn];
+  if(!c||c.owner!==a.pid)return; // not your turn
+  if(a.type==='bid'&&c.budget>=nextBid(hostS))hBid(lot.turn);
+  else if(a.type==='pass')hPass(lot.turn,false);
+}
+
+/* ================= RENDER (everyone) ================= */
+function renderAll(){
+  if(!R)return;
+  const st=R.state;
+  if(!st){renderLobby();return;}
+  if(st.phase==='auction'){renderAuction(st);return;}
+  if(st.phase==='season'){renderSeason(st);return;}
+}
+function renderLobby(){
+  show('scr-lobby');
+  $('lobby-code').textContent=code;
+  const set=R.settings||{};
+  $('host-pill').textContent=isHost?'you are the host':'host controls these';
+  $('lobby-players').innerHTML=Object.entries(R.players||{}).map(([pid,p])=>
+    `<div><span>${pid===R.host?'👑':'👤'} ${esc(p.name)}${pid===myId?' (you)':''}</span></div>`).join('')||'<div>Waiting…</div>';
+  ['set-mode','set-budget','set-pool','set-ai'].forEach(id=>$(id).disabled=!isHost);
+  $('btn-start').style.display=isHost?'':'none';
+  if(!isHost){
+    if(set.mode)$('set-mode').value=set.mode;
+    if(set.budget)$('set-budget').value=set.budget;
+    if(set.pool)$('set-pool').value=set.pool;
+    if(set.ai!=null)$('set-ai').value=set.ai;
+  }
+}
+function myClubIdx(st){return st.clubs.findIndex(c=>c.owner===myId);}
+function renderAuction(st){
+  show('scr-auction');
+  $('btn-end').style.display=isHost?'':'none';
+  $('auction-title').textContent=st.mode==='draft'?'🃏 Draft Room':'🔨 Auction Room';
+  $('auction-sub').textContent=`Room ${code} · ${st.clubs.length} clubs${st.mode==='draft'?' · snake draft':' · '+money(st.budget)+' each'}`;
+  $('log').innerHTML=(st.log||[]).map(l=>`<div>${l}</div>`).join('');
+  renderClubPanels(st);
+  if(st.mode==='draft'){$('pcard').style.display='none';$('draftbox').style.display='';renderDraft(st);}
+  else{$('pcard').style.display='';$('draftbox').style.display='none';renderLot(st);}
+}
+function renderLot(st){
+  const p=PLAYERS[st.order[st.lotIdx]];if(!p)return;
+  const lot=st.lot||{};
+  $('p-stripe').style.background=LG[p[2]][1];
+  $('p-lot').textContent=`Lot ${st.lotIdx+1} of ${st.order.length}`;
+  $('p-name').textContent=p[0];
+  $('p-meta').textContent=`${p[1]} · ${LG[p[2]][0]}`;
+  $('p-badges').innerHTML=`<span class="badge">${p[3]}</span><span class="badge" style="color:${LG[p[2]][1]}">${LG[p[2]][0]}</span>`;
+  $('p-rating').textContent=p[4];
+  $('p-base').textContent=money(p[5]);
+  $('p-bid').textContent=lot.bid>0?money(lot.bid):'—';
+  $('p-leader').textContent=lot.leader>=0?st.clubs[lot.leader].name:'—';
+  // hammer
+  const h=$('hammer');
+  if(st.hammer){$('hammer-big').textContent=st.hammer.big;$('hammer-big').className='big '+st.hammer.cls;
+    $('hammer-sub').textContent=st.hammer.sub;h.classList.add('show');}
+  else h.classList.remove('show');
+  // turnbar
+  const mine=myClubIdx(st);
+  const turnClub=st.clubs[lot.turn];
+  if(st.hammer||!turnClub){ $('turnbar').innerHTML='…'; return; }
+  const need=nextBid(st);
+  if(lot.turn===mine&&!lot.done&&!(lot.passed&&lot.passed[mine])){
+    $('turnbar').innerHTML=`<span class="who">🎤 Your move</span>
+      <button class="btn" onclick="sendAction({type:'bid'})">Bid ${money(need)}</button>
+      <button class="btn gray" onclick="sendAction({type:'pass'})">Pass</button>`;
+  }else{
+    $('turnbar').innerHTML=`<span class="who">${turnClub.ai?'🤖':'👤'} ${esc(turnClub.name)}</span>&nbsp;is on the clock…`;
+  }
+}
+function renderDraft(st){
+  const d=st.draft||{};
+  const c=st.clubs[d.clubIdx];
+  $('d-round').textContent=`Round ${Math.floor((d.count||0)/st.clubs.length)+1} of ${DRAFT_ROUNDS} · Pick ${(d.count||0)+1}`;
+  const mine=myClubIdx(st);
+  const myTurn=c&&d.picking&&d.clubIdx===mine;
+  $('d-turn').innerHTML=c?`<span class="who">${c.ai?'🤖':'👤'} ${esc(c.name)}</span>&nbsp;${myTurn?'— your pick!':'is choosing…'}`:'…';
+  $('d-hand').innerHTML=(d.hand||[]).map((pi,k)=>{
+    const p=PLAYERS[pi];
+    return `<div class="hcard ${myTurn?'':'disabled'}" onclick="sendAction({type:'pick',k:${k}})">
+      <div class="stripe" style="background:${LG[p[2]][1]}"></div>
+      <div class="r">${p[4]}</div><div class="nm">${esc(p[0])}</div>
+      <div class="mt">${p[3]} · ${esc(p[1])}</div></div>`;}).join('');
+}
+function renderClubPanels(st){
+  const lot=st.lot||{};
+  $('club-panels').innerHTML=st.clubs.map((c,i)=>{
+    const n=posCountS(c),sq=c.squad||[];
+    const passed=st.mode!=='draft'&&lot.passed&&lot.passed[i];
+    const isTurn=st.mode==='draft'?(st.draft&&st.draft.clubIdx===i):(lot.turn===i&&!passed&&!st.hammer);
+    const leading=st.mode!=='draft'&&lot.leader===i;
+    const slots=Array.from({length:SQUAD_CAP},(_,k)=>{
+      const e=sq[k];
+      return `<div class="slot ${e?'filled':''}" title="${e?esc(PLAYERS[e.i][0]):''}">${e?PLAYERS[e.i][3][0]:k+1}</div>`;}).join('');
+    const needs=Object.keys(MIN_NEED).map(k=>`<span><b class="${n[k]>=MIN_NEED[k]?'ok':''}">${k} ${n[k]}</b>/${MIN_NEED[k]}</span>`).join('');
+    const status=st.mode==='draft'?(isTurn?'Picking…':''):leading?'⭐ Leading bid':passed?'Passed':isTurn?'On the clock…':'';
+    return `<div class="card club ${isTurn?'turn':''} ${passed?'out':''} ${c.owner===myId?'me':''}">
+      <div class="chead"><span class="cname">${c.ai?'🤖':'👤'} ${esc(c.name)}${c.owner===myId?' (you)':''}</span>
+      <span class="cbudget">${st.mode==='draft'?sq.length+' picks':money(c.budget)}</span></div>
+      <div class="slots">${slots}</div>
+      <div class="needs">${needs}<span><b>${sq.length}</b>/${SQUAD_CAP}</span></div>
+      <div class="statusline">${status}</div></div>`;
+  }).join('');
+}
+function renderSeason(st){
+  show('scr-season');
+  $('btn-sim').style.display=isHost?'':'none';
+  $('btn-sim').textContent=st.season?'↻ Re-simulate':'▶ Simulate Season';
+  $('squads').innerHTML=st.clubs.map(c=>{
+    const xi=bestXI(c),xiSet=new Set(xi.filter(s=>!s.ghost).map(s=>s.p[0]));
+    const rows=squadOf(c).sort((a,b)=>b.p[4]-a.p[4]).map(s=>
+      `<tr class="${xiSet.has(s.p[0])?'xi':''}"><td>${s.p[3]}</td><td>${esc(s.p[0])}</td>
+       <td style="color:var(--dim)">${s.price?money(s.price):''}</td><td class="r">${s.p[4]}</td></tr>`).join('');
+    return `<div class="card sq"><div class="chead"><span class="cname">${c.ai?'🤖':'👤'} ${esc(c.name)}</span>
+      <span class="cbudget">XI ${xiRating(xi).toFixed(1)}</span></div>
+      <div class="sub">${(c.squad||[]).length} players</div>
+      <table>${rows||'<tr><td style="color:var(--dim)">No players</td></tr>'}</table></div>`;
+  }).join('');
+  if(st.season){
+    const T=st.season.table;
+    const champ=T[0];
+    $('champ-slot').innerHTML=`<div class="champbanner"><div style="font-size:44px">🏆</div>
+      <div class="t">${esc(st.clubs[champ.i].name)}</div>
+      <div class="sub">Champions — ${champ.pts} pts (${champ.w}W ${champ.d}D ${champ.l}L)</div></div>`;
+    $('stand-card').style.display='';
+    $('standings').innerHTML=`<tr><th>#</th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>`+
+      T.map((t,i)=>`<tr class="${i===0?'champ':''}"><td>${i+1}</td><td>${esc(st.clubs[t.i].name)}</td>
+        <td>${t.w+t.d+t.l}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td>
+        <td>${t.gf}</td><td>${t.ga}</td><td>${t.gf-t.ga>0?'+':''}${t.gf-t.ga}</td><td class="pts">${t.pts}</td></tr>`).join('');
+    $('match-card').style.display='';
+    $('matches').innerHTML=st.season.results.map(m=>
+      `<div class="match"><span>${esc(st.clubs[m.a].name)} vs ${esc(st.clubs[m.b].name)}</span><span class="score">${m.ga} – ${m.gb}</span></div>`).join('');
+  }else{
+    $('champ-slot').innerHTML='';$('stand-card').style.display='none';$('match-card').style.display='none';
+  }
+}
+</script>
+</body>
+</html>
